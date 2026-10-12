@@ -3,3 +3,10 @@
 
 # Ada Library Information
 *.ali
+
+node_modules/
+dist/
+logs/
+.env
+auth_info_baileys/
+*.log

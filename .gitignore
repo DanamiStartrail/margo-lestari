@@ -10,3 +10,39 @@ logs/
 .env
 auth_info_baileys/
 *.log
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# WhatsApp Session / Baileys Auth Data (PENTING: Jangan sampai ter-push)
+auth_info_baileys/
+*auth_info*
+*.data.json
+
+# Temporary / Testing files
+src/tes.py
+__pycache__/
+*.pyc
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

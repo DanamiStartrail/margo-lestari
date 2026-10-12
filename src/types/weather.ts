@@ -1,61 +1,50 @@
-import axios from 'axios';
-
-const BMKG_API_URL = 'https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=18.01.13.2012';
-
-export interface WeatherItem {
-  datetime: string;
-  local_datetime: string;
-  t: number;
-  hu: number;
-  weather_desc: string;
-  ws: number;
-  tp?: number;
+// Informasi wilayah administratif BMKG
+export interface BMKGLokasi {
+  adm1: string;
+  adm2: string;
+  adm3: string;
+  adm4: string;
+  provinsi: string;
+  kotkab: string;
+  kecamatan: string;
+  desa: string;
+  lon: number;
+  lat: number;
+  timezone: string;
+  type?: string;
 }
 
-export async function getNearestWeatherForecast(): Promise<WeatherItem | null> {
-  try {
-    const response = await axios.get(BMKG_API_URL);
-    const prakiraan = response.data.data;
+// Parameter cuaca per slot waktu (interval 3 jam)
+export interface WeatherItem {
+  datetime: string;
+  utc_datetime: string;
+  local_datetime: string;       // Format: YYYY-MM-DD HH:mm:ss
+  t: number;                    // Suhu udara (°C)
+  hu: number;                   // Kelembapan udara (%)
+  tp: number;                   // Curah hujan (mm)
+  weather: number;              // Kode cuaca numerik
+  weather_desc: string;         // Deskripsi cuaca (Cerah, Berawan, Hujan, dll.)
+  weather_desc_en?: string;     // Deskripsi cuaca bahasa Inggris
+  ws: number;                   // Kecepatan angin (km/jam)
+  wd: string;                   // Arah angin datang
+  wd_deg?: number;              // Derajat arah angin
+  wd_to?: string;               // Arah angin menuju
+  tcc?: number;                 // Tutupan awan (%)
+  vs?: number | null;           // Jarak pandang
+  vs_text?: string | null;      // Teks jarak pandang
+  time_index?: string;
+  analysis_date?: string;
+  image?: string;               // URL ikon cuaca SVG BMKG
+}
 
-    if (!prakiraan || prakiraan.length === 0 || !prakiraan[0].cuaca) {
-      return null;
-    }
+// Data per entri wilayah di dalam array 'data'
+export interface BMKGDataEntry {
+  lokasi: BMKGLokasi;
+  cuaca: WeatherItem[][];       // Format array 2D: cuaca[hari][interval]
+}
 
-    // Ratakan array 2 dimensi cuaca
-    const allForecasts: WeatherItem[] = prakiraan[0].cuaca.flat();
-
-    // Validasi isi array
-    if (allForecasts.length === 0 || !allForecasts[0]) {
-      return null;
-    }
-
-    const now = new Date().getTime();
-
-    // Inisialisasi dengan elemen pertama yang sudah diverifikasi ada
-    let nearestItem: WeatherItem = allForecasts[0];
-    let smallestDiff = Math.abs(
-      new Date(nearestItem.local_datetime.replace(' ', 'T')).getTime() - now
-    );
-
-    for (const item of allForecasts) {
-      if (!item || !item.local_datetime) continue;
-
-      const itemTime = new Date(item.local_datetime.replace(' ', 'T')).getTime();
-      const diff = Math.abs(itemTime - now);
-
-      if (diff < smallestDiff) {
-        smallestDiff = diff;
-        nearestItem = item;
-      }
-    }
-
-    return nearestItem;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Gagal mengambil data dari API BMKG:', error.message);
-    } else {
-      console.error('Terjadi kesalahan tak terduga:', error);
-    }
-    return null;
-  }
+// Struktur root response dari API BMKG
+export interface BMKGWeatherResponse {
+  lokasi: BMKGLokasi;
+  data: BMKGDataEntry[];
 }

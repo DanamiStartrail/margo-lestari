@@ -1,28 +1,22 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Memuat file .env dari root direktori
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
 
-export const CONFIG = {
-  port: parseInt(process.env.PORT || '3000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  
-  // Informasi Lokasi Mitra
-  village: {
-    name: process.env.VILLAGE_NAME || 'Desa Margo Lestari',
-    latitude: parseFloat(process.env.LATITUDE || '-5.35'),
-    longitude: parseFloat(process.env.LONGITUDE || '105.35'),
+export const ENV = {
+  BMKG: {
+    ADM4: process.env.BMKG_ADM4 ?? '18.01.13.2012',
+    BASE_URL: process.env.BMKG_BASE_URL ?? 'https://api.bmkg.go.id/publik/prakiraan-cuaca',
+    get API_URL(): string {
+      return `${this.BASE_URL}?adm4=${this.ADM4}`;
+    },
   },
-
-  // WhatsApp & Testing
-  testPhoneNumber: process.env.TEST_PHONE_NUMBER || '',
-
-  // Cron Job Schedule
-  cronSchedule: process.env.CRON_SCHEDULE || '0 6,17 * * *',
+  OPEN_METEO: {
+    LAT: Number(process.env.OPEN_METEO_LAT ?? -5.2933),
+    LON: Number(process.env.OPEN_METEO_LON ?? 105.3409),
+    BASE_URL: process.env.OPEN_METEO_BASE_URL ?? 'https://api.open-meteo.com/v1/forecast',
+    get API_URL(): string {
+      return `${this.BASE_URL}?latitude=${this.LAT}&longitude=${this.LON}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FJakarta`;
+    },
+  },
+  CRON_SCHEDULE: process.env.CRON_SCHEDULE ?? '0 */3 * * *',
 };
-
-// Validasi sederhana saat aplikasi pertama kali berjalan
-if (!CONFIG.testPhoneNumber && CONFIG.nodeEnv === 'development') {
-  console.warn('⚠️ [WARNING]: TEST_PHONE_NUMBER belum diisi di file .env');
-}

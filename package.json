@@ -4,9 +4,12 @@
   "type": "module",
   "main": "index.js",
   "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.20.0",
     "dotenv": "^18.0.7",
-    "node-cron": "^4.6.0"
+    "node-cron": "^4.6.0",
+    "pino": "^10.4.0",
+    "qrcode-terminal": "^0.12.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -26,6 +29,8 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@types/node-cron": "^3.0.11",
+    "@types/qrcode-terminal": "^0.12.2",
+    "pm2": "^7.0.4",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"

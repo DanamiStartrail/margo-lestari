@@ -19,4 +19,6 @@ export const ENV = {
     },
   },
   CRON_SCHEDULE: process.env.CRON_SCHEDULE ?? '0 */3 * * *',
+  WHATSAPP_TARGET_JID: process.env.WHATSAPP_TARGET_JID ?? '',
+  MONGODB_URI: process.env.MONGODB_URI ?? '',
 };

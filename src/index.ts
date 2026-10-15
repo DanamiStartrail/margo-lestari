@@ -1,3 +1,4 @@
+import express from 'express';
 import cron from 'node-cron';
 import { ENV } from './config/env.js';
 import { getNearestWeatherForecast } from './services/weather.js';
@@ -23,21 +24,31 @@ async function handleWeatherJob(): Promise<void> {
   const summary = formatWeatherBroadcast(bmkgData, openMeteoData);
   saveWeatherHistory(bmkgData, openMeteoData, summary);
 
-  // Kirim pesan nyata ke WhatsApp
   await sendWeatherBroadcast(summary);
 }
 
-// Inisialisasi koneksi WhatsApp saat aplikasi dinyalakan
-initWhatsAppClient();
+// 1. Jalankan Dummy Server HTTP untuk Render & UptimeRobot
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Jalankan cron job
-cron.schedule(ENV.CRON_SCHEDULE, () => {
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    service: 'Margo Lestari Weather Backend',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`[HTTP Server] Aktif dan mendengarkan di port ${PORT}`);
+});
+
+// 2. Inisialisasi WhatsApp & jalankan pengambilan cuaca pertama setelah terkoneksi
+initWhatsAppClient(() => {
   handleWeatherJob();
 });
 
-console.log('Sistem backend Margo Lestari aktif.');
-
-// Beri jeda 8 detik agar soket WhatsApp sempat terhubung sebelum pengujian pertama
-setTimeout(() => {
+// 3. Jalankan cron job berkala
+cron.schedule(ENV.CRON_SCHEDULE, () => {
   handleWeatherJob();
-}, 8000);
+});

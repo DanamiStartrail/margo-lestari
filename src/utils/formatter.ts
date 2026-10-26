@@ -10,9 +10,9 @@ export interface WeatherSummary {
 /**
  * Menentukan tingkat peringatan berdasarkan curah hujan (mm)
  * Standar BMKG:
- * - 0.5 - 20 mm/hari  : Hujan Ringan
- * - 20 - 50 mm/hari   : Hujan Sedang (Waspada)
- * - > 50 mm/hari      : Hujan Lebat/Sangat Lebat (Siaga)
+ * - 0 - 20 mm   : AMAN
+ * - 20 - 50 mm  : WASPADA
+ * - >= 50 mm    : SIAGA
  */
 export function evaluateRainfallLevel(rainBmkg: number, rainOpenMeteo: number): 'AMAN' | 'WASPADA' | 'SIAGA' {
   const maxRain = Math.max(rainBmkg, rainOpenMeteo);
@@ -27,7 +27,7 @@ export function evaluateRainfallLevel(rainBmkg: number, rainOpenMeteo: number): 
 }
 
 /**
- * Menyusun format pesan siaran untuk WhatsApp Channel Desa Margo Lestari
+ * Menyusun format pesan siaran untuk WhatsApp Desa Margo Lestari
  */
 export function formatWeatherBroadcast(
   bmkg: WeatherItem | null,
@@ -44,6 +44,7 @@ export function formatWeatherBroadcast(
       ? '⚠️ *WASPADA: POTENSI HUJAN SEDANG*'
       : '🌤️ *PRAKIRAAN CUACA DESA MARGO LESTARI*';
 
+  const statusEmoji = status === 'SIAGA' ? '🔴' : status === 'WASPADA' ? '🟡' : '🟢';
   const waktu = bmkg?.local_datetime ?? new Date().toLocaleString('id-ID');
   const kondisiBmkg = bmkg?.weather_desc ?? 'Tidak tersedia';
   const kondisiOpenMeteo = openMeteo ? decodeWMOCode(openMeteo.weather_code) : 'Tidak tersedia';
@@ -51,17 +52,21 @@ export function formatWeatherBroadcast(
   const kelembapan = bmkg?.hu ?? openMeteo?.relative_humidity_2m ?? '-';
   const angin = bmkg?.ws ?? openMeteo?.wind_speed_10m ?? '-';
 
+  // Tautan radar interaktif real-time Desa Margo Lestari
+  const radarLiveUrl = 'https://www.rainviewer.com/weather-radar-map-live.html?loc=-5.2933,105.3409,10';
+
   const pesan = `${statusHeader}
 
 📅 *Waktu Pembaruan:* ${waktu} WIB
 📍 *Wilayah:* Desa Margo Lestari, Jati Agung
 
-📊 *Kondisi Cuaca:*
-• Status Prediksi : ${kondisiBmkg} (Pembanding: ${kondisiOpenMeteo})
-• Suhu Udara     : ${suhu}°C
-• Kelembapan     : ${kelembapan}%
-• Curah Hujan    : ${rainBmkg} mm
-• Kecepatan Angin: ${angin} km/jam
+📊 *Kondisi Terkini:*
+• Status Indikator : ${statusEmoji} [${status}]
+• Prediksi Cuaca   : ${kondisiBmkg} (Pembanding: ${kondisiOpenMeteo})
+• Suhu Udara       : ${suhu}°C
+• Kelembapan       : ${kelembapan}%
+• Curah Hujan      : ${rainBmkg} mm
+• Kecepatan Angin  : ${angin} km/jam
 
 ℹ️ *Catatan Warga:*
 ${
@@ -71,6 +76,9 @@ ${
     ? 'Kondisi berpotensi hujan. Petani dan warga yang beraktivitas di luar ruangan disarankan mempersiapkan perlengkapan hujan.'
     : 'Kondisi cuaca terpantau kondusif untuk aktivitas pertanian dan kegiatan sehari-hari.'
 }
+
+🌐 *Pantau Radar Awan Hujan:*
+${radarLiveUrl}
 
 _Sumber: BMKG & Open-Meteo API_`;
 

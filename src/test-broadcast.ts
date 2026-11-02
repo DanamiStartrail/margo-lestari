@@ -2,14 +2,14 @@ import { formatWeatherBroadcast } from './utils/formatter.js';
 import type { WeatherItem } from './types/weather.js';
 import type { OpenMeteoCurrentData } from './types/openmeteo.js';
 
-// 1. Data Dummy Cuaca Normal (Status: AMAN)
+// 1. Data Dummy Cuaca Normal (Status: AMAN | Curah Hujan: 0 mm)
 const mockDataAman: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
   bmkg: {
     local_datetime: new Date().toLocaleString('id-ID'),
     weather_desc: 'Cerah Berawan',
     t: 28,
     hu: 75,
-    tp: 0, // Curah hujan 0 mm
+    tp: 0,
     ws: 5,
   } as WeatherItem,
   openMeteo: {
@@ -21,14 +21,14 @@ const mockDataAman: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
   } as OpenMeteoCurrentData,
 };
 
-// 2. Data Dummy Potensi Hujan Sedang (Status: WASPADA)
+// 2. Data Dummy Potensi Hujan Sedang (Status: WASPADA | Curah Hujan: 25 mm)
 const mockDataWaspada: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
   bmkg: {
     local_datetime: new Date().toLocaleString('id-ID'),
     weather_desc: 'Hujan Sedang',
     t: 24,
     hu: 88,
-    tp: 25, // Curah hujan 25 mm (kategori 20 - 50 mm)
+    tp: 25,
     ws: 18,
   } as WeatherItem,
   openMeteo: {
@@ -40,14 +40,14 @@ const mockDataWaspada: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = 
   } as OpenMeteoCurrentData,
 };
 
-// 3. Data Dummy Potensi Hujan Lebat / Darurat (Status: SIAGA)
+// 3. Data Dummy Potensi Hujan Lebat / Darurat (Status: SIAGA | Curah Hujan: 65 mm)
 const mockDataSiaga: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
   bmkg: {
     local_datetime: new Date().toLocaleString('id-ID'),
     weather_desc: 'Hujan Badai / Lebat',
     t: 22,
     hu: 95,
-    tp: 65, // Curah hujan > 50 mm (kategori ekstrem)
+    tp: 65,
     ws: 35,
   } as WeatherItem,
   openMeteo: {
@@ -59,27 +59,26 @@ const mockDataSiaga: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
   } as OpenMeteoCurrentData,
 };
 
-function previewAllMessages() {
+function generateTerminalOutput() {
   console.log('\n==================================================');
-  console.log(' SIMULASI FORMAT PESAN WHATSAPP MARGO LESTARI');
+  console.log('  SIMULASI 3 VARIASI PESAN BROADCAST DESA MARGO LESTARI');
   console.log('==================================================\n');
 
-  // Format masing-masing skenario
   const pesanAman = formatWeatherBroadcast(mockDataAman.bmkg, mockDataAman.openMeteo);
   const pesanWaspada = formatWeatherBroadcast(mockDataWaspada.bmkg, mockDataWaspada.openMeteo);
   const pesanSiaga = formatWeatherBroadcast(mockDataSiaga.bmkg, mockDataSiaga.openMeteo);
 
-  console.log(`>>> HASIL 1: [STATUS: ${pesanAman.status}] <<<`);
+  console.log(`>>> [VARIASI 1: ${pesanAman.status}] <<<`);
   console.log(pesanAman.pesanWhatsApp);
   console.log('\n--------------------------------------------------\n');
 
-  console.log(`>>> HASIL 2: [STATUS: ${pesanWaspada.status}] <<<`);
+  console.log(`>>> [VARIASI 2: ${pesanWaspada.status}] <<<`);
   console.log(pesanWaspada.pesanWhatsApp);
   console.log('\n--------------------------------------------------\n');
 
-  console.log(`>>> HASIL 3: [STATUS: ${pesanSiaga.status}] <<<`);
+  console.log(`>>> [VARIASI 3: ${pesanSiaga.status}] <<<`);
   console.log(pesanSiaga.pesanWhatsApp);
   console.log('\n==================================================');
 }
 
-previewAllMessages();
+generateTerminalOutput();

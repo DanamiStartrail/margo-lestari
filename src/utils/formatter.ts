@@ -7,28 +7,15 @@ export interface WeatherSummary {
   pesanWhatsApp: string;
 }
 
-/**
- * Menentukan tingkat peringatan berdasarkan curah hujan (mm)
- * Standar BMKG:
- * - 0 - 20 mm   : AMAN
- * - 20 - 50 mm  : WASPADA
- * - >= 50 mm    : SIAGA
- */
 export function evaluateRainfallLevel(rainBmkg: number, rainOpenMeteo: number): 'AMAN' | 'WASPADA' | 'SIAGA' {
+  // Ambil nilai curah hujan tertinggi dari kedua sumber untuk prinsip kewaspadaan
   const maxRain = Math.max(rainBmkg, rainOpenMeteo);
 
-  if (maxRain >= 20 && maxRain < 50) {
-    return 'WASPADA';
-  }
-  if (maxRain >= 50) {
-    return 'SIAGA';
-  }
+  if (maxRain >= 50) return 'SIAGA';
+  if (maxRain >= 20) return 'WASPADA';
   return 'AMAN';
 }
 
-/**
- * Menyusun format pesan siaran untuk WhatsApp Desa Margo Lestari
- */
 export function formatWeatherBroadcast(
   bmkg: WeatherItem | null,
   openMeteo: OpenMeteoCurrentData | null
@@ -37,53 +24,53 @@ export function formatWeatherBroadcast(
   const rainOpenMeteo = openMeteo?.precipitation ?? 0;
   const status = evaluateRainfallLevel(rainBmkg, rainOpenMeteo);
 
-  const statusHeader =
-    status === 'SIAGA'
-      ? '🚨 *PERINGATAN DINI: POTENSI HUJAN LEBAT*'
-      : status === 'WASPADA'
-      ? '⚠️ *WASPADA: POTENSI HUJAN SEDANG*'
-      : '🌤️ *PRAKIRAAN CUACA DESA MARGO LESTARI*';
-
-  const statusEmoji = status === 'SIAGA' ? '🔴' : status === 'WASPADA' ? '🟡' : '🟢';
   const waktu = bmkg?.local_datetime ?? new Date().toLocaleString('id-ID');
   const kondisiBmkg = bmkg?.weather_desc ?? 'Tidak tersedia';
   const kondisiOpenMeteo = openMeteo ? decodeWMOCode(openMeteo.weather_code) : 'Tidak tersedia';
   const suhu = bmkg?.t ?? openMeteo?.temperature_2m ?? '-';
-  const kelembapan = bmkg?.hu ?? openMeteo?.relative_humidity_2m ?? '-';
-  const angin = bmkg?.ws ?? openMeteo?.wind_speed_10m ?? '-';
 
-  // Tautan radar interaktif real-time Desa Margo Lestari
-  const radarLiveUrl = 'https://www.rainviewer.com/weather-radar-map-live.html?loc=-5.2933,105.3409,10';
+  // Deteksi Perbedaan Prediksi
+  const isConflict = (rainBmkg < 20 && rainOpenMeteo >= 20) || (rainBmkg >= 20 && rainOpenMeteo < 20);
+
+  const statusHeader =
+    status === 'SIAGA'
+      ? '🚨 *PERINGATAN DARURAT: HUJAN LEBAT*'
+      : status === 'WASPADA'
+      ? '⚠️ *PERINGATAN CUACA MARGO LESTARI*'
+      : '🌤️ *INFO CUACA MARGO LESTARI*';
+
+  const statusEmoji = status === 'SIAGA' ? '🔴' : status === 'WASPADA' ? '🟡' : '🟢';
+
+  let himbauan = '';
+  if (status === 'SIAGA') {
+    himbauan = '• Pindahkan barang berharga ke tempat aman.\n• Amankan jalur irigasi & matikan listrik jika air mulai menggenang.';
+  } else if (status === 'WASPADA') {
+    if (isConflict) {
+      himbauan = '• *Catatan:* Terdapat perbedaan prediksi antara BMKG dan Open-Meteo. Petani di sawah diimbau tetap bersiap membawa jas hujan & mengamankan jemuran panen.';
+    } else {
+      himbauan = '• Petani dan warga yang beraktivitas di luar diimbau membawa jas hujan.\n• Cek saluran air di sekitar rumah.';
+    }
+  } else {
+    himbauan = '• Cuaca sangat kondusif untuk aktivitas di sawah, jemur hasil panen, atau bepergian.';
+  }
 
   const pesan = `${statusHeader}
+📅 *Hari/Waktu:* ${waktu} WIB
 
-📅 *Waktu Pembaruan:* ${waktu} WIB
-📍 *Wilayah:* Desa Margo Lestari, Jati Agung
+${statusEmoji} *STATUS: ${status}*
 
-📊 *Kondisi Terkini:*
-• Status Indikator : ${statusEmoji} [${status}]
-• Prediksi Cuaca   : ${kondisiBmkg} (Pembanding: ${kondisiOpenMeteo})
-• Suhu Udara       : ${suhu}°C
-• Kelembapan       : ${kelembapan}%
-• Curah Hujan      : ${rainBmkg} mm
-• Kecepatan Angin  : ${angin} km/jam
+Laporan Cuaca:
+• BMKG Utama  : ${kondisiBmkg}
+• Open-Meteo  : ${kondisiOpenMeteo}
+• Suhu Udara  : ${suhu}°C
 
-ℹ️ *Catatan Warga:*
-${
-  status === 'SIAGA'
-    ? 'Diimbau bagi warga di area dataran rendah dan bantaran saluran air untuk mengantisipasi potensi genangan atau luapan air.'
-    : status === 'WASPADA'
-    ? 'Kondisi berpotensi hujan. Petani dan warga yang beraktivitas di luar ruangan disarankan mempersiapkan perlengkapan hujan.'
-    : 'Kondisi cuaca terpantau kondusif untuk aktivitas pertanian dan kegiatan sehari-hari.'
-}
+💡 *Himbauan Warga & Petani:*
+${himbauan}
 
-🌐 *Pantau Radar Awan Hujan:*
-${radarLiveUrl}
+🗺️ *Pantau Radar Hujan Live:*
+https://www.rainviewer.com/weather-radar-map-live.html?loc=-5.2933,105.3409,10
 
-_Sumber: BMKG & Open-Meteo API_`;
+_Salam hangat, Pemdes & Tim Relawan Desa Margo Lestari_`;
 
-  return {
-    status,
-    pesanWhatsApp: pesan,
-  };
+  return { status, pesanWhatsApp: pesan };
 }

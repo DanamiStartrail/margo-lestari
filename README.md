@@ -64,6 +64,13 @@ Mesin evaluasi menggunakan nilai curah hujan tertinggi dari kedua sumber:
 | `20-<50 mm` | 🟡 **WASPADA** | Potensi hujan sedang; warga perlu bersiap |
 | `>= 50 mm` | 🔴 **SIAGA** | Potensi hujan lebat dan genangan/luapan air |
 
+#### Format Pesan Status SIAGA
+
+Jika status berada pada level 🔴 **SIAGA**, pesan broadcast menyertakan:
+
+- 📞 **Kontak Darurat Desa:** `[isi nomor kontak desa]`
+- ⚠️ **Disclaimer:** pesan bersifat estimasi/prakiraan cuaca. Warga tetap diimbau memantau kondisi fisik di sekitar dan mengikuti arahan pihak berwenang.
+
 ### 🔐 Persistent Auth Session
 
 Sesi autentikasi WhatsApp Baileys disimpan menggunakan adapter MongoDB Atlas melalui `useMongoAuthState`. Dengan demikian, sesi dapat dipertahankan ketika server mengalami restart atau re-deploy.
@@ -126,7 +133,8 @@ Service menyediakan endpoint health-check `GET /` menggunakan Express agar dapat
 - [x] Pembuatan Express dummy server & logging system (JSONL)
 - [x] Deployment ke cloud hosting (Render) & setup UptimeRobot (anti-sleep 24/7)
 - [x] Penautan WhatsApp target (Community Announcement / Channel Group)
-- [ ] Testing & validation (black-box testing & usage log)
+- [ ] Testing & validation (black-box testing & usage log), termasuk pencatatan anomali akurasi: BMKG dan Open-Meteo kerap mengalami false negative, yaitu status AMAN saat hujan deras terjadi di lokasi
+- [ ] Eksplorasi dan pengujian sumber data atau model cuaca alternatif untuk validasi lokal
 - [ ] Sosialisasi ke perangkat desa & penempelan QR Code komunitas
 
 ---

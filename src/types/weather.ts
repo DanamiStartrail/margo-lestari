@@ -48,3 +48,13 @@ export interface BMKGWeatherResponse {
   lokasi: BMKGLokasi;
   data: BMKGDataEntry[];
 }
+
+export type SourceStatus = 'OK' | 'ERROR' | 'STALE';
+
+export interface SourceResult<T> {
+  source: 'bmkg' | 'open-meteo';
+  status: SourceStatus;
+  data: T | null;
+  fetchedAt: string;
+  error?: string;
+}

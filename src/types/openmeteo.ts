@@ -29,3 +29,25 @@ export interface OpenMeteoResponse {
   current_units: OpenMeteoCurrentUnits;
   current: OpenMeteoCurrentData;
 }
+
+export interface OpenMeteoHourlyData {
+  time: string[];
+  precipitation: number[];
+  precipitation_probability: number[];
+  temperature_2m: number[];
+  relative_humidity_2m: number[];
+  dew_point_2m: number[];
+  cloud_cover: number[];
+  surface_pressure: number[];
+  cape: number[];
+  wind_speed_10m: number[];
+  wind_gusts_10m: number[];
+  weather_code: number[];
+}
+
+export interface OpenMeteoHourlyResponse {
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  hourly: OpenMeteoHourlyData;
+}

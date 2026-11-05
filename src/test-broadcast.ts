@@ -1,6 +1,41 @@
 import { formatWeatherBroadcast } from './utils/formatter.js';
 import type { WeatherItem } from './types/weather.js';
 import type { OpenMeteoCurrentData } from './types/openmeteo.js';
+import type { SourceResult } from './types/weather.js';
+import type { OpenMeteoHourlyResponse } from './types/openmeteo.js';
+
+function toSourceResults(
+  bmkg: WeatherItem,
+  openMeteo: OpenMeteoCurrentData,
+): [SourceResult<WeatherItem>, SourceResult<OpenMeteoHourlyResponse>] {
+  return [
+    { source: 'bmkg', status: 'OK', data: bmkg, fetchedAt: new Date().toISOString() },
+    {
+      source: 'open-meteo',
+      status: 'OK',
+      fetchedAt: new Date().toISOString(),
+      data: {
+        latitude: -5.2933,
+        longitude: 105.3409,
+        timezone: 'Asia/Jakarta',
+        hourly: {
+          time: [openMeteo.time],
+          precipitation: [openMeteo.precipitation, openMeteo.precipitation, openMeteo.precipitation],
+          precipitation_probability: [100],
+          temperature_2m: [openMeteo.temperature_2m],
+          relative_humidity_2m: [openMeteo.relative_humidity_2m],
+          dew_point_2m: [openMeteo.temperature_2m],
+          cloud_cover: [0],
+          surface_pressure: [1000],
+          cape: [0],
+          wind_speed_10m: [openMeteo.wind_speed_10m],
+          wind_gusts_10m: [openMeteo.wind_speed_10m],
+          weather_code: [openMeteo.weather_code],
+        },
+      },
+    },
+  ];
+}
 
 // 1. Data Dummy Cuaca Normal (Status: AMAN | Curah Hujan: 0 mm)
 const mockDataAman: { bmkg: WeatherItem; openMeteo: OpenMeteoCurrentData } = {
@@ -64,9 +99,9 @@ function generateTerminalOutput() {
   console.log('  SIMULASI 3 VARIASI PESAN BROADCAST DESA MARGO LESTARI');
   console.log('==================================================\n');
 
-  const pesanAman = formatWeatherBroadcast(mockDataAman.bmkg, mockDataAman.openMeteo);
-  const pesanWaspada = formatWeatherBroadcast(mockDataWaspada.bmkg, mockDataWaspada.openMeteo);
-  const pesanSiaga = formatWeatherBroadcast(mockDataSiaga.bmkg, mockDataSiaga.openMeteo);
+  const pesanAman = formatWeatherBroadcast(...toSourceResults(mockDataAman.bmkg, mockDataAman.openMeteo));
+  const pesanWaspada = formatWeatherBroadcast(...toSourceResults(mockDataWaspada.bmkg, mockDataWaspada.openMeteo));
+  const pesanSiaga = formatWeatherBroadcast(...toSourceResults(mockDataSiaga.bmkg, mockDataSiaga.openMeteo));
 
   console.log(`>>> [VARIASI 1: ${pesanAman.status}] <<<`);
   console.log(pesanAman.pesanWhatsApp);

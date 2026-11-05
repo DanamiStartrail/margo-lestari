@@ -10,11 +10,16 @@ import type { WeatherSummary } from '../utils/formatter.js';
 let sock: ReturnType<typeof makeWASocket> | null = null;
 let isConnected = false;
 let isInitialRunDone = false;
+let initPromise: Promise<void> | null = null;
+let reconnectTimer: NodeJS.Timeout | undefined;
+let reconnectAttempt = 0;
+let mongoPing: (() => Promise<boolean>) | undefined;
 
-export async function initWhatsAppClient(onReady?: () => void): Promise<void> {
+async function initializeWhatsAppClient(onReady?: () => void): Promise<void> {
   try {
     writeSystemLog('INFO', 'Menghubungkan ke MongoDB Atlas untuk memuat sesi Baileys...');
-    const { state, saveCreds } = await useMongoAuthState(ENV.MONGODB_URI);
+    const { state, saveCreds, ping } = await useMongoAuthState(ENV.MONGODB_URI);
+    mongoPing = ping;
 
     sock = makeWASocket({
       auth: state,
@@ -22,7 +27,11 @@ export async function initWhatsAppClient(onReady?: () => void): Promise<void> {
       printQRInTerminal: false,
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', () => {
+      void saveCreds().catch((error: unknown) => {
+        writeSystemLog('ERROR', `Gagal menyimpan kredensial Baileys: ${String(error)}`);
+      });
+    });
 
     sock.ev.on('connection.update', (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -39,11 +48,10 @@ export async function initWhatsAppClient(onReady?: () => void): Promise<void> {
         isConnected = false;
         writeSystemLog('WARN', 'Koneksi WhatsApp terputus. Mencoba menghubungkan ulang...');
 
-        if (shouldReconnect) {
-          initWhatsAppClient(onReady);
-        }
+        if (shouldReconnect) scheduleReconnect(onReady);
       } else if (connection === 'open') {
         isConnected = true;
+        reconnectAttempt = 0;
         console.log('[WhatsApp] Perangkat berhasil terhubung via MongoDB Session!');
         writeSystemLog('INFO', 'Koneksi WhatsApp berhasil tersambung.');
 
@@ -58,6 +66,33 @@ export async function initWhatsAppClient(onReady?: () => void): Promise<void> {
     console.error('[WhatsApp/MongoAuth Error] Gagal menginisialisasi sesi:', error);
     writeSystemLog('ERROR', `Gagal inisialisasi WhatsApp/MongoDB: ${String(error)}`);
   }
+}
+
+export function initWhatsAppClient(onReady?: () => void): Promise<void> {
+  if (initPromise) return initPromise;
+  initPromise = initializeWhatsAppClient(onReady).finally(() => {
+    initPromise = null;
+  });
+  return initPromise;
+}
+
+function scheduleReconnect(onReady?: () => void): void {
+  if (reconnectTimer) return;
+  const delay = Math.min(60_000, 1_000 * 2 ** reconnectAttempt) +
+    Math.floor(Math.random() * 500);
+  reconnectAttempt++;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = undefined;
+    void initWhatsAppClient(onReady);
+  }, delay);
+}
+
+export function getWhatsAppHealth(): { connected: boolean; mongoPing: boolean } {
+  return { connected: isConnected, mongoPing: Boolean(mongoPing) };
+}
+
+export async function pingWhatsAppMongo(): Promise<boolean> {
+  return mongoPing ? mongoPing() : false;
 }
 
 export async function sendWeatherBroadcast(summary: WeatherSummary): Promise<void> {

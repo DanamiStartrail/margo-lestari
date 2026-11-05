@@ -1,63 +1,86 @@
-import type { WeatherItem } from '../types/weather.js';
-import type { OpenMeteoCurrentData } from '../types/openmeteo.js';
-import { decodeWMOCode } from '../services/openmeteo.js';
+import type { WeatherItem, SourceResult } from '../types/weather.js';
+import type { OpenMeteoHourlyResponse } from '../types/openmeteo.js';
+import { aggregateRainfall, decodeWMOCode } from '../services/openmeteo.js';
+
+export type AlertStatus = 'AMAN' | 'WASPADA' | 'SIAGA' | 'DATA_TIDAK_TERSEDIA';
 
 export interface WeatherSummary {
-  status: 'AMAN' | 'WASPADA' | 'SIAGA';
+  status: AlertStatus;
   pesanWhatsApp: string;
 }
 
-export function evaluateRainfallLevel(rainBmkg: number, rainOpenMeteo: number): 'AMAN' | 'WASPADA' | 'SIAGA' {
-  // Ambil nilai curah hujan tertinggi dari kedua sumber untuk prinsip kewaspadaan
-  const maxRain = Math.max(rainBmkg, rainOpenMeteo);
+export function evaluateRainfallLevel(
+  rainValues: Array<number | null>,
+): AlertStatus {
+  const validValues = rainValues.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  if (validValues.length === 0) return 'DATA_TIDAK_TERSEDIA';
 
-  if (maxRain >= 50) return 'SIAGA';
-  if (maxRain >= 20) return 'WASPADA';
+  const maximumRain = Math.max(...validValues);
+  if (maximumRain >= 50) return 'SIAGA';
+  if (maximumRain >= 20) return 'WASPADA';
   return 'AMAN';
 }
 
 export function formatWeatherBroadcast(
-  bmkg: WeatherItem | null,
-  openMeteo: OpenMeteoCurrentData | null
+  bmkg: SourceResult<WeatherItem>,
+  openMeteo: SourceResult<OpenMeteoHourlyResponse>,
 ): WeatherSummary {
-  const rainBmkg = bmkg?.tp ?? 0;
-  const rainOpenMeteo = openMeteo?.precipitation ?? 0;
-  const status = evaluateRainfallLevel(rainBmkg, rainOpenMeteo);
+  const bmkgRain = bmkg.data?.tp ?? null;
+  const openMeteoWindow = openMeteo.data
+    ? aggregateRainfall(openMeteo.data.hourly)
+    : null;
+  const openMeteoRain = openMeteoWindow?.rain3h ?? null;
+  const status = evaluateRainfallLevel([bmkgRain, openMeteoRain]);
+  const activeSources = [
+    bmkg.data ? 'BMKG' : null,
+    openMeteo.data ? 'Open-Meteo' : null,
+  ].filter((source): source is string => source !== null);
+  const dataNote = activeSources.length === 2
+    ? 'Kualitas data: OK'
+    : activeSources.length === 1
+      ? `Kualitas data: PARTIAL_DATA (sumber aktif: ${activeSources[0]})`
+      : 'Kualitas data: DATA_TIDAK_TERSEDIA';
 
-  const waktu = bmkg?.local_datetime ?? new Date().toLocaleString('id-ID');
-  const kondisiBmkg = bmkg?.weather_desc ?? 'Tidak tersedia';
-  const kondisiOpenMeteo = openMeteo ? decodeWMOCode(openMeteo.weather_code) : 'Tidak tersedia';
-  const suhu = bmkg?.t ?? openMeteo?.temperature_2m ?? '-';
+  const firstIndex = openMeteo.data?.hourly.time.length ? 0 : -1;
+  const openMeteoCode = firstIndex >= 0
+    ? openMeteo.data?.hourly.weather_code[firstIndex]
+    : undefined;
+  const waktu = bmkg.data?.local_datetime ?? openMeteo.data?.hourly.time[0] ??
+    new Date().toLocaleString('id-ID');
+  const kondisiBmkg = bmkg.data?.weather_desc ?? 'Tidak tersedia';
+  const kondisiOpenMeteo = openMeteoCode !== undefined
+    ? decodeWMOCode(openMeteoCode)
+    : 'Tidak tersedia';
+  const suhu = bmkg.data?.t ?? openMeteo.data?.hourly.temperature_2m[0] ?? '-';
+  const isConflict = bmkgRain !== null && openMeteoRain !== null &&
+    ((bmkgRain < 20 && openMeteoRain >= 20) ||
+      (bmkgRain >= 20 && openMeteoRain < 20));
 
-  // Deteksi Perbedaan Prediksi
-  const isConflict = (rainBmkg < 20 && rainOpenMeteo >= 20) || (rainBmkg >= 20 && rainOpenMeteo < 20);
-
-  const statusHeader =
-    status === 'SIAGA'
-      ? '🚨 *PERINGATAN DARURAT: HUJAN LEBAT*'
-      : status === 'WASPADA'
+  const statusHeader = status === 'SIAGA'
+    ? '🚨 *PERINGATAN DARURAT: HUJAN LEBAT*'
+    : status === 'WASPADA'
       ? '⚠️ *PERINGATAN CUACA MARGO LESTARI*'
-      : '🌤️ *INFO CUACA MARGO LESTARI*';
-
-  const statusEmoji = status === 'SIAGA' ? '🔴' : status === 'WASPADA' ? '🟡' : '🟢';
-
-  let himbauan = '';
-  if (status === 'SIAGA') {
-    himbauan = '• Pindahkan barang berharga ke tempat aman.\n• Amankan jalur irigasi & matikan listrik jika air mulai menggenang.';
-  } else if (status === 'WASPADA') {
-    if (isConflict) {
-      himbauan = '• *Catatan:* Terdapat perbedaan prediksi antara BMKG dan Open-Meteo. Petani di sawah diimbau tetap bersiap membawa jas hujan & mengamankan jemuran panen.';
-    } else {
-      himbauan = '• Petani dan warga yang beraktivitas di luar diimbau membawa jas hujan.\n• Cek saluran air di sekitar rumah.';
-    }
-  } else {
-    himbauan = '• Cuaca sangat kondusif untuk aktivitas di sawah, jemur hasil panen, atau bepergian.';
-  }
+      : status === 'DATA_TIDAK_TERSEDIA'
+        ? '⛔ *DATA CUACA TIDAK TERSEDIA*'
+        : '🌤️ *INFO CUACA MARGO LESTARI*';
+  const statusEmoji = status === 'SIAGA' ? '🔴' : status === 'WASPADA' ? '🟡' : status === 'DATA_TIDAK_TERSEDIA' ? '⚪' : '🟢';
+  const himbauan = status === 'SIAGA'
+    ? '• Pindahkan barang berharga ke tempat aman.\n• Amankan jalur irigasi & matikan listrik jika air mulai menggenang.'
+    : status === 'WASPADA'
+      ? isConflict
+        ? '• Terdapat perbedaan prediksi; warga diimbau tetap bersiap membawa jas hujan.'
+        : '• Bawa jas hujan dan cek saluran air di sekitar rumah.'
+      : status === 'DATA_TIDAK_TERSEDIA'
+        ? '• Jangan menganggap kondisi AMAN. Pantau kondisi fisik dan sumber resmi setempat.'
+        : '• Cuaca relatif kondusif untuk aktivitas di sawah atau bepergian.';
 
   const pesan = `${statusHeader}
 📅 *Hari/Waktu:* ${waktu} WIB
 
 ${statusEmoji} *STATUS: ${status}*
+${dataNote}
 
 Laporan Cuaca:
 • BMKG Utama  : ${kondisiBmkg}

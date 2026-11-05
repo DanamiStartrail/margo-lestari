@@ -21,6 +21,7 @@ export async function useMongoAuthState(
   state: AuthenticationState;
   saveCreds: () => Promise<void>;
   closeConnection: () => Promise<void>;
+  ping: () => Promise<boolean>;
 }> {
   if (!mongoUri) {
     throw new Error('[MongoAuth] MONGODB_URI belum disetel di file .env');
@@ -37,8 +38,17 @@ export async function useMongoAuthState(
   const db = client.db('margo_lestari');
   const collection: Collection<SessionDocument> = db.collection<SessionDocument>(collectionName);
 
+  const ping = async (): Promise<boolean> => {
+    try {
+      await db.command({ ping: 1 });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // Fungsi simpan data ke MongoDB
-  const writeData = async (data: any, id: string): Promise<void> => {
+  const writeData = async (data: unknown, id: string): Promise<void> => {
     try {
       const serialized = JSON.stringify(data, BufferJSON.replacer);
       await collection.updateOne(
@@ -47,19 +57,20 @@ export async function useMongoAuthState(
         { upsert: true }
       );
     } catch (error) {
-      console.error(`[MongoAuth] Gagal menyimpan data untuk key ${id}:`, error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`[MongoAuth] Gagal menyimpan data untuk key ${id}: ${message}`);
     }
   };
 
   // Fungsi baca data dari MongoDB
-  const readData = async (id: string): Promise<any | null> => {
+  const readData = async <T>(id: string): Promise<T | null> => {
     try {
       const doc = await collection.findOne({ _id: id });
       if (!doc?.data) return null;
       return JSON.parse(doc.data, BufferJSON.reviver);
     } catch (error) {
-      console.error(`[MongoAuth] Gagal membaca data untuk key ${id}:`, error);
-      return null;
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`[MongoAuth] Gagal membaca data untuk key ${id}: ${message}`);
     }
   };
 
@@ -68,13 +79,15 @@ export async function useMongoAuthState(
     try {
       await collection.deleteOne({ _id: id });
     } catch (error) {
-      console.error(`[MongoAuth] Gagal menghapus data untuk key ${id}:`, error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`[MongoAuth] Gagal menghapus data untuk key ${id}: ${message}`);
     }
   };
   
 
   // Ambil data creds utama atau buat kredensial baru jika belum ada
-  const creds: AuthenticationCreds = (await readData('creds')) || initAuthCreds();
+  const creds: AuthenticationCreds =
+    (await readData<AuthenticationCreds>('creds')) || initAuthCreds();
 
   return {
     state: {
@@ -84,16 +97,19 @@ export async function useMongoAuthState(
           const data: { [key: string]: SignalDataTypeMap[T] } = {};
           await Promise.all(
             ids.map(async (id) => {
-              let value = await readData(`${type}-${id}`);
+              const value = await readData<unknown>(`${type}-${id}`);
               if (type === 'app-state-sync-key' && value) {
-                value = proto.Message.AppStateSyncKeyData.fromObject(value);
+                data[id] = proto.Message.AppStateSyncKeyData.fromObject(
+                  value as object,
+                ) as unknown as SignalDataTypeMap[T];
+              } else if (value !== null) {
+                data[id] = value as SignalDataTypeMap[T];
               }
-              data[id] = value;
             })
           );
           return data;
         },
-        set: async (data: any) => {
+            set: async (data: Record<string, Record<string, unknown>>) => {
           const tasks: Promise<void>[] = [];
           for (const category in data) {
             for (const id in data[category]) {
@@ -110,5 +126,6 @@ export async function useMongoAuthState(
     closeConnection: async () => {
       await client.close();
     },
+    ping,
   };
 }

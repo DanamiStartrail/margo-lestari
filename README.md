@@ -37,13 +37,38 @@ Sistem ini mendukung **SDGs Desa Tujuan 13: Desa Tanggap Perubahan Iklim**, khus
 
 Alur utama sistem adalah:
 
-```text
-BMKG API ───────┐
-                ├─> Weather Processing ─> Rainfall Level Engine
-Open-Meteo API ─┘                              │
-                                              ├─> JSONL & System Log
-                                              └─> WhatsApp Broadcast
-                                                   └─> Community / Channel
+```mermaid
+graph TD
+    subgraph L1["1. Data Source"]
+        BMKG["BMKG API"]
+        OPEN_METEO["Open-Meteo API"]
+    end
+
+    subgraph L2["2. Core Service (Render)"]
+        INGEST["Dual-Source Ingestion"]
+        RAIN["Rainfall Level Engine"]
+        CRON["Scheduler (Cron)"]
+        HTTP["Express Dummy HTTP Server"]
+    end
+
+    subgraph L3["3. Storage & External"]
+        MONGO["MongoDB Atlas<br/>(useMongoAuthState)"]
+        UPTIME["UptimeRobot<br/>(Ping GET /)"]
+    end
+
+    subgraph L4["4. Output"]
+        BAILEYS["Baileys WhatsApp Broadcast"]
+        CHANNEL["Saluran / Komunitas Desa"]
+    end
+
+    BMKG --> INGEST
+    OPEN_METEO --> INGEST
+    CRON --> INGEST
+    INGEST --> RAIN
+    RAIN --> BAILEYS
+    BAILEYS --> CHANNEL
+    BAILEYS <--> MONGO
+    UPTIME -->|"GET /"| HTTP
 ```
 
 ### 🌦️ Multi-Source Weather Data Ingestion

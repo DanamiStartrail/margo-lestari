@@ -10,12 +10,12 @@ export interface OpenMeteoCurrentUnits {
 
 export interface OpenMeteoCurrentData {
   time: string;
-  interval: number;
-  temperature_2m: number;
-  relative_humidity_2m: number;
-  precipitation: number;
-  weather_code: number;
-  wind_speed_10m: number;
+  interval: number | null;
+  temperature_2m: number | null;
+  relative_humidity_2m: number | null;
+  precipitation: number | null;
+  weather_code: number | null;
+  wind_speed_10m: number | null;
 }
 
 export interface OpenMeteoResponse {
@@ -32,17 +32,17 @@ export interface OpenMeteoResponse {
 
 export interface OpenMeteoHourlyData {
   time: string[];
-  precipitation: number[];
-  precipitation_probability: number[];
-  temperature_2m: number[];
-  relative_humidity_2m: number[];
-  dew_point_2m: number[];
-  cloud_cover: number[];
-  surface_pressure: number[];
-  cape: number[];
-  wind_speed_10m: number[];
-  wind_gusts_10m: number[];
-  weather_code: number[];
+  precipitation: Array<number | null>;
+  precipitation_probability: Array<number | null>;
+  temperature_2m: Array<number | null>;
+  relative_humidity_2m: Array<number | null>;
+  dew_point_2m: Array<number | null>;
+  cloud_cover: Array<number | null>;
+  surface_pressure: Array<number | null>;
+  cape: Array<number | null>;
+  wind_speed_10m: Array<number | null>;
+  wind_gusts_10m: Array<number | null>;
+  weather_code: Array<number | null>;
 }
 
 export interface OpenMeteoHourlyResponse {

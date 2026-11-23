@@ -33,7 +33,7 @@ export function writeSystemLog(level: LogLevel, message: string): void {
 export interface WeatherLogRecord {
   timestamp: string;
   waktuPrediksi: string;
-  status: 'AMAN' | 'WASPADA' | 'SIAGA' | 'DATA_TIDAK_TERSEDIA';
+  status: 'AMAN' | 'WASPADA' | 'SIAGA' | 'DATA_TIDAK_TERSEDIA' | 'PARTIAL_DATA';
   bmkg: {
     suhu: number | null;
     kelembapan: number | null;

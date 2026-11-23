@@ -12,9 +12,18 @@ export interface RainfallWindow {
   rain6h: number | null;
 }
 
-function sumCompleteWindow(values: number[], size: number): number | null {
+function sumCompleteWindow(
+  values: Array<number | null>,
+  size: number,
+): number | null {
   if (values.length < size) return null;
-  return values.slice(0, size).reduce((total, value) => total + value, 0);
+  const window = values.slice(0, size);
+  if (window.some((value) => value === null || !Number.isFinite(value))) {
+    return null;
+  }
+  return window.reduce<number>((total, value) => {
+    return total + (value ?? 0);
+  }, 0);
 }
 
 export function aggregateRainfall(hourly: OpenMeteoHourlyData): RainfallWindow {

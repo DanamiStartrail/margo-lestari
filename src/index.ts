@@ -36,11 +36,11 @@ async function handleWeatherJob(): Promise<void> {
       ? {
           time: openMeteoData.data.hourly.time[0] ?? new Date().toISOString(),
           interval: 3600,
-          temperature_2m: openMeteoData.data.hourly.temperature_2m[0] ?? 0,
-          relative_humidity_2m: openMeteoData.data.hourly.relative_humidity_2m[0] ?? 0,
-          precipitation: openMeteoData.data.hourly.precipitation[0] ?? 0,
-          weather_code: openMeteoData.data.hourly.weather_code[0] ?? 0,
-          wind_speed_10m: openMeteoData.data.hourly.wind_speed_10m[0] ?? 0,
+          temperature_2m: openMeteoData.data.hourly.temperature_2m[0] ?? null,
+          relative_humidity_2m: openMeteoData.data.hourly.relative_humidity_2m[0] ?? null,
+          precipitation: openMeteoData.data.hourly.precipitation[0] ?? null,
+          weather_code: openMeteoData.data.hourly.weather_code[0] ?? null,
+          wind_speed_10m: openMeteoData.data.hourly.wind_speed_10m[0] ?? null,
         }
       : null;
     saveWeatherHistory(bmkgData.data, openMeteoCurrent, summary);
@@ -60,20 +60,21 @@ app.get('/', (_req, res) => {
     service: 'Margo Lestari Weather Backend',
     timestamp: new Date().toISOString(),
   });
+});
 
-  app.get('/health/live', (_req, res) => {
-    res.status(200).json({ status: 'alive', timestamp: new Date().toISOString() });
-  });
+app.get('/health/live', (_req, res) => {
+  res.status(200).json({ status: 'alive', timestamp: new Date().toISOString() });
+});
 
-  app.get('/health/ready', async (_req, res) => {
-    const whatsapp = getWhatsAppHealth();
-    const mongo = await pingWhatsAppMongo();
-    const ready = whatsapp.connected && mongo;
-    res.status(ready ? 200 : 503).json({
-      status: ready ? 'ready' : 'not-ready',
-      whatsapp: whatsapp.connected ? 'connected' : 'disconnected',
-      mongo: mongo ? 'connected' : 'disconnected',
-    });
+app.get('/health/ready', async (_req, res) => {
+  const whatsapp = getWhatsAppHealth();
+  const mongo = await pingWhatsAppMongo();
+  const ready = whatsapp.connected && mongo;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not-ready',
+    whatsapp: whatsapp.connected ? 'connected' : 'disconnected',
+    mongo: mongo ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
   });
 });
 
